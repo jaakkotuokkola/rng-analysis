@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rngDist</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>RNG Distribution Analysis <span class="subtitle">(Range: 1-100)</span></h1>
+      <p class="stats" aria-live="polite">Generated numbers: <span id="counter">0</span></p>
+    </header>
+
+    <form id="controls" class="controls">
+      <div class="input-group">
+        <label for="num-random-numbers">Sample Size:</label>
+        <input type="number" id="num-random-numbers" min="100" max="1000000" value="20000" step="100">
+        <div class="stats-panel">
+          <div class="metric" title="Standard Deviation (σ): Measures the dispersion of numbers from their mean. For a perfect uniform distribution of numbers 1-100, σ should be approximately 28.87">
+            <span class="label">σ:</span>
+            <span id="std-dev" class="value">0.00</span>
+          </div>
+          <div class="metric" title="Chi-squared (χ²): Measures goodness of fit between observed and expected frequencies. For a uniform distribution with 99 degrees of freedom, values below 123.23 suggest uniformity at p=0.05">
+            <span class="label">χ²:</span>
+            <span id="chi-squared" class="value">0.00</span>
+          </div>
+          <div class="metric" title="95% Confidence Interval: Range within which the true population mean falls with 95% probability. Narrower intervals indicate more precise estimates">
+            <span class="label">95% CI:</span>
+            <span id="confidence" class="value">±0.00</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="input-group">
+        <label for="interval">Update Interval (ms):</label>
+        <input type="range" id="interval" min="0" max="20" value="6" step="1">
+        <output for="interval" id="interval-value">6</output>
+      </div>
+
+      <div class="button-group">
+        <button type="button" id="run-btn" aria-label="Start analysis">
+          <span class="btn-text">Run</span>
+          <span class="btn-loader" style="display: none" aria-hidden="true"></span>
+        </button>
+      </div>
+    </form>
+
+    <div class="visualization">
+      <figure class="chart-container">
+        <canvas id="bar-canvas" role="img" aria-label="Histogram distribution"></canvas>
+        <figcaption>Frequency Distribution</figcaption>
+      </figure>
+      
+      <figure class="chart-container">
+        <canvas id="line-canvas" role="img" aria-label="Cumulative average trend"></canvas>
+        <figcaption>Cumulative Average</figcaption>
+      </figure>
+    </div>
+  </main>
+
+  <script src="code.js"></script>
+</body>
+</html>
