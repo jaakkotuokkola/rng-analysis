@@ -9,6 +9,4 @@ Visual analysis of random number generator (RNG) distributions. Provides statist
 ## Usage
 Open index.html in a browser. Adjust sample size and interval as needed. The histogram and average line update in real-time, showing distribution patterns and statistical significance.
 
-Pure JavaScript, HTML5 Canvas, CSS3. No external dependencies.
-
 ![Image](https://github.com/user-attachments/assets/98454539-a7dc-4ea1-bcd0-ea0f37cf49d8)
