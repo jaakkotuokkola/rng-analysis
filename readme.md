@@ -9,4 +9,4 @@ Visual analysis of random number generator (RNG) distributions between 1-100.
 ## Usage
 Open index.html in a browser. Adjust distribution, sample size and interval as needed. The histogram and average line update in real-time, showing distribution patterns and statistical significance.
 
-![Image](https://github.com/user-attachments/assets/98454539-a7dc-4ea1-bcd0-ea0f37cf49d8)
+![Image](https://github.com/user-attachments/assets/c1d85306-d9cc-4da3-98c4-a07d2a6eccb6)
