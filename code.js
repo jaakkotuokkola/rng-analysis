@@ -1,11 +1,10 @@
 class HistogramVisualizer {
   constructor() {
-    // initialize data structures first
     this.data = Array(100).fill(0);
     this.sum = 0;
     this.count = 0;
     this.averages = [];
-    this.sumOfSquares = 0;  // sum of squares for variance calculation
+    this.sumOfSquares = 0;
     
     this.animationId = null;
     this.config = {
@@ -14,9 +13,12 @@ class HistogramVisualizer {
       gridColor: 'rgba(255, 255, 255, 0.03)',
       canvasWidth: 800,
       canvasHeight: 400,
-      maxDataPoints: 1000, // limit points for line chart
-      sampleThreshold: 10000 // threshold for sampling to prevent lag
+      maxDataPoints: 1000,
+      sampleThreshold: 10000
     };
+
+    this.selectedDistribution = 'uniform';
+    this.distributionParams = {};
 
     this.initElements();
     this.setupCanvases();
@@ -31,7 +33,7 @@ class HistogramVisualizer {
   }
 
   initElements() {
-    // styling stuff and initializing
+
     this.barCanvas = document.getElementById('bar-canvas');
     this.lineCanvas = document.getElementById('line-canvas');
     this.barCtx = this.barCanvas.getContext('2d');
@@ -51,6 +53,11 @@ class HistogramVisualizer {
     this.rangeInput.oninput = (e) => {
       this.rangeOutput.value = e.target.value;
     };
+
+    this.distributionSelect = document.getElementById('distribution');
+    this.distParamGroups = document.querySelectorAll('.dist-params');
+    this.distributionSelect.onchange = () => this.updateDistParamVisibility();
+    this.updateDistParamVisibility();
   }
 
   setupCanvases() {
@@ -64,6 +71,35 @@ class HistogramVisualizer {
     window.addEventListener('resize', () => this.setupCanvases());
   }
 
+  updateDistParamVisibility() {
+    const dist = this.distributionSelect.value;
+    this.selectedDistribution = dist;
+    this.distParamGroups.forEach(group => {
+      group.style.display = group.getAttribute('data-dist') === dist ? '' : 'none';
+    });
+  }
+
+  getDistributionParams() {
+    switch (this.selectedDistribution) {
+      case 'normal':
+        return {
+          mean: +document.getElementById('normal-mean').value,
+          stddev: +document.getElementById('normal-stddev').value
+        };
+      case 'binomial':
+        return {
+          n: +document.getElementById('binomial-n').value,
+          p: +document.getElementById('binomial-p').value
+        };
+      case 'poisson':
+        return {
+          lambda: +document.getElementById('poisson-lambda').value
+        };
+      default:
+        return {};
+    }
+  }
+
   resetState() {
     this.data = Array(100).fill(0);
     this.sum = 0;
@@ -71,6 +107,9 @@ class HistogramVisualizer {
     this.averages = [];
     this.sumOfSquares = 0;
     this.clearCanvases();
+
+    this.selectedDistribution = this.distributionSelect.value;
+    this.distributionParams = this.getDistributionParams();
   }
 
   clearCanvases() {
@@ -79,13 +118,48 @@ class HistogramVisualizer {
   }
 
   generateNumber() {
-    const value = Math.floor(Math.random() * 100);
-    // convert to 1-100 range
-    const actualValue = value + 1;
-    this.data[value]++;
-    this.sum += actualValue;
-    // store sum of squares
-    this.sumOfSquares += actualValue * actualValue;
+    let value;
+    switch (this.selectedDistribution) {
+      case 'uniform':
+        value = Math.floor(Math.random() * 100) + 1;
+        break;
+      case 'normal': {
+        // box-Muller transform
+        const { mean, stddev } = this.distributionParams;
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        value = Math.round(mean + stddev * z);
+        value = Math.max(1, Math.min(100, value));
+        break;
+      }
+      case 'binomial': {
+        const { n, p } = this.distributionParams;
+        let successes = 0;
+        for (let i = 0; i < n; i++) {
+          if (Math.random() < p) successes++;
+        }
+        value = Math.max(1, Math.min(100, successes));
+        break;
+      }
+      case 'poisson': {
+        const { lambda } = this.distributionParams;
+        let L = Math.exp(-lambda), k = 0, pVal = 1;
+        do {
+          k++;
+          pVal *= Math.random();
+        } while (pVal > L);
+        value = k - 1;
+        value = Math.max(1, Math.min(100, value));
+        break;
+      }
+      default:
+        value = Math.floor(Math.random() * 100) + 1;
+    }
+    this.data[value - 1]++;
+    this.sum += value;
+    this.sumOfSquares += value * value;
     this.count++;
     this.averages.push(this.sum / this.count);
   }
@@ -97,7 +171,7 @@ class HistogramVisualizer {
 
     this.data.forEach((count, i) => {
       const barHeight = count * scaleY;
-      const hue = 210 + (i / 100 * 30); // gradient
+      const hue = 210 + (i / 100 * 30);
       this.barCtx.fillStyle = `hsla(${hue}, 70%, 60%, 0.85)`;
       this.barCtx.fillRect(
         i * scaleX,
@@ -195,7 +269,7 @@ class HistogramVisualizer {
 
   animationLoop() {
     if (!this.isAnimating) {
-      this.stopAnimation(); // hide loading icon
+      this.stopAnimation();
       return;
     }
 
@@ -219,10 +293,7 @@ class HistogramVisualizer {
       this.framesProcessed++;
     }
 
-    // update metrics every frame
     this.updateMetrics();
-
-    // update visuals
     this.updateCounter(this.framesProcessed);
     this.clearCanvases();
     this.drawHistogram();
@@ -261,8 +332,92 @@ class HistogramVisualizer {
         return;
       }
       
+      this.selectedDistribution = this.distributionSelect.value;
+      this.distributionParams = this.getDistributionParams();
       this.startAnimation(numRandomNumbers, interval);
     }
+  }
+
+  calculateExpectedFrequencies() {
+    const expected = Array(100).fill(0);
+    switch (this.selectedDistribution) {
+      case 'uniform': {
+        const freq = this.count / 100;
+        expected.fill(freq);
+        break;
+      }
+      case 'normal': {
+        const { mean, stddev } = this.distributionParams;
+        let totalProb = 0;
+        for (let i = 1; i <= 100; i++) {
+          const prob = (1 / (stddev * Math.sqrt(2 * Math.PI))) *
+            Math.exp(-0.5 * Math.pow((i - mean) / stddev, 2));
+          expected[i - 1] = prob;
+          totalProb += prob;
+        }
+
+        for (let i = 0; i < 100; i++) {
+          expected[i] = expected[i] / totalProb * this.count;
+        }
+        break;
+      }
+      case 'binomial': {
+        const { n, p } = this.distributionParams;
+        // Binomial PMF for k = 1..100
+        // log to avoid overflow for large n
+        //  log(n choose k)
+        function logBinom(n, k) {
+          let res = 0;
+          for (let i = 1; i <= k; i++) {
+            res += Math.log(n - i + 1) - Math.log(i);
+          }
+          return res;
+        }
+        let totalProb = 0;
+        for (let i = 1; i <= 100; i++) {
+          if (i > n) {
+            expected[i - 1] = 0;
+            continue;
+          }
+          const logP = logBinom(n, i) + i * Math.log(p) + (n - i) * Math.log(1 - p);
+          const prob = Math.exp(logP);
+          expected[i - 1] = prob;
+          totalProb += prob;
+        }
+
+        for (let i = 0; i < 100; i++) {
+          expected[i] = expected[i] / totalProb * this.count;
+        }
+        break;
+      }
+      case 'poisson': {
+        const { lambda } = this.distributionParams;
+        // Poisson PMF for k = 1..100
+        let totalProb = 0;
+        for (let i = 1; i <= 100; i++) {
+          // P(k) = (λ^k * e^-λ) / k!
+          let logP = i * Math.log(lambda) - lambda;
+          // log(k!)
+          let logFact = 0;
+          for (let j = 2; j <= i; j++) logFact += Math.log(j);
+          logP -= logFact;
+          const prob = Math.exp(logP);
+          expected[i - 1] = prob;
+          totalProb += prob;
+        }
+        
+        for (let i = 0; i < 100; i++) {
+          expected[i] = expected[i] / totalProb * this.count;
+        }
+        break;
+      }
+      default: {
+        // fallback: uniform
+        const freq = this.count / 100;
+        expected.fill(freq);
+      }
+    }
+    return expected;
   }
 
   calculateStatistics() {
@@ -276,10 +431,16 @@ class HistogramVisualizer {
       const variance = (this.sumOfSquares / this.count) - (mean * mean);
       const stdDev = Math.sqrt(variance);
 
-      // chi-squared test for uniform distribution
-      const expected = this.count / 100;  // expected frequency for uniform distribution
-      const chiSquared = this.data.reduce((acc, observed) => 
-        acc + Math.pow(observed - expected, 2) / expected, 0);
+      // chi-squared test for selected distribution
+      let chiSquared = 0;
+      const expected = this.calculateExpectedFrequencies();
+      let valid = true;
+      for (let i = 0; i < 100; i++) {
+        
+        if (expected[i] < 1e-8) continue;
+        chiSquared += Math.pow(this.data[i] - expected[i], 2) / expected[i];
+      }
+      if (!isFinite(chiSquared)) valid = false;
 
       // 95% confidence interval for the mean
       const confidenceInterval = 1.96 * stdDev / Math.sqrt(this.count);
@@ -287,7 +448,7 @@ class HistogramVisualizer {
       return {
         mean: mean.toFixed(2),
         stdDev: stdDev.toFixed(2),
-        chiSquared: chiSquared.toFixed(2),
+        chiSquared: valid ? chiSquared.toFixed(2) : 'N/A',
         confidenceInterval: confidenceInterval.toFixed(2)
       };
     } catch (error) {
